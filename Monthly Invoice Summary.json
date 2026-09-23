@@ -1,0 +1,175 @@
+{
+  "name": "Monthly Invoice Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5defb488-b6ee-4ec9-bd83-1824da6b9dad",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1XqrEasAcmHlnKyPBCHmyieTla532H8_iOFPNowofiyE",
+          "mode": "list",
+          "cachedResultName": "Invoice Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1XqrEasAcmHlnKyPBCHmyieTla532H8_iOFPNowofiyE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "invoice",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1XqrEasAcmHlnKyPBCHmyieTla532H8_iOFPNowofiyE/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "6b0c0abe-20cd-494c-9521-427b44302ef1",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "MoN542hX0e5bvEBL",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst now = new Date();\nconst currentMonth = now.getMonth();\nconst currentYear = now.getFullYear();\n\nlet totalCount = 0;\nlet totalAmount = 0;\nconst categoryTotals = {};\n\nfor (const item of items) {\n  const row = item.json;\n  const invoiceDate = new Date(row.Date);\n  \n  if (isNaN(invoiceDate.getTime())) continue;\n  \n  // Only count invoices from last month\n  if (invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear) {\n    totalCount++;\n    const total = Number(row.Total) || 0;\n    totalAmount += total;\n    \n    const category = row.Category || 'Other';\n    categoryTotals[category] = (categoryTotals[category] || 0) + total;\n  }\n}\n\n// Find top category\nlet topCategory = 'None';\nlet topAmount = 0;\nfor (const [cat, amt] of Object.entries(categoryTotals)) {\n  if (amt > topAmount) {\n    topCategory = cat;\n    topAmount = amt;\n  }\n}\n\nreturn [{\n  json: {\n    total_count: totalCount,\n    total_amount: totalAmount,\n    top_category: topCategory,\n    top_category_amount: topAmount\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "6f647a46-beab-4e6c-bf90-0d1382cfe3a2",
+      "name": "Calculate Summary"
+    },
+    {
+      "parameters": {
+        "chatId": "1257454702",
+        "text": "=📊 Monthly Invoice Summary  Total invoices: {{ $json.total_count }} Total amount: {{ $json.total_amount }} Top category: {{ $json.top_category }} ({{ $json.top_category_amount }})",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "133348a4-17d4-4e90-83f3-5b577df8a59c",
+      "name": "Send a text message",
+      "webhookId": "df280f79-2678-4692-9f3e-314b18e760a9",
+      "credentials": {
+        "telegramApi": {
+          "id": "SFj8E1ylhTJQxvlR",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "millforextrades@gmail.com",
+        "subject": "=📊 Monthly Invoice Summary",
+        "message": "=📊 Monthly Invoice Summary  Total invoices: {{ $json.total_count }} Total amount: {{ $json.total_amount }} Top category: {{ $json.top_category }} ({{ $json.top_category_amount }})",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        144
+      ],
+      "id": "1a812f93-ac65-4062-9745-6fb38cb6a342",
+      "name": "Send a message",
+      "webhookId": "111d9875-e67f-4600-9161-03ad60404b16",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "kx2R88vOonDRnSlH",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Calculate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Summary": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3919984b-1b55-4f02-8b7c-a1d44716fd26",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a5e05bc78fcfcb24ab31da92754db931e826dd2be7b0b6cdefabd08ec0bb14c"
+  },
+  "nodeGroups": [],
+  "id": "nixA0YCELJrQ0uiB",
+  "tags": []
+}
