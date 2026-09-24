@@ -1,0 +1,169 @@
+{
+  "name": "invoice payment reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "83fe26cc-1ae3-414a-87ea-72caa9b2e56e",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Invoice Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "invoice",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "851c3cb2-c5e0-4c4a-a17f-af10ed06a0d1",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst now = new Date();\nconst overdueThresholdDays = 7;\n\nconst overdue = [];\n\nfor (const item of items) {\n  const row = item.json;\n  \n  // Skip anything already marked Paid\n  if (row.Status !== 'Pending') continue;\n  \n  // Parse the invoice date\n  const invoiceDate = new Date(row.Date);\n  if (isNaN(invoiceDate.getTime())) continue; // skip if date is unreadable\n  \n  const daysPending = Math.floor((now - invoiceDate) / (1000 * 60 * 60 * 24));\n  \n  if (daysPending >= overdueThresholdDays) {\n    overdue.push({\n      json: {\n        vendor: row.Vendor,\n        invoice_number: row['Invoice Number'],\n        total: row.Total,\n        days_pending: daysPending\n      }\n    });\n  }\n}\n\nreturn overdue;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "f9ad4dc6-4de4-454a-8e3e-d6c5a9ed6152",
+      "name": "Filter overdue invoices"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=⏰ Payment reminder Invoice #{{ $json.invoice_number }} ({{ $json.vendor }}) has not been paid yet for {{ $json.days_pending }} days. Amount: {{ $json.total }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "5a9f3472-eabd-4e2e-b818-fef437646daf",
+      "name": "Send a text message",
+      "webhookId": "ca49c0c7-aeaa-40be-bd29-0409d9d3746c",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "=⏰ Payment reminder",
+        "message": "=⏰ Payment reminder Invoice #{{ $json.invoice_number }} ({{ $json.vendor }}) has not been paid yet for {{ $json.days_pending }} days. Amount: {{ $json.total }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        144
+      ],
+      "id": "d6d216eb-dc42-484e-aa3f-381b0f70e999",
+      "name": "Send a message",
+      "webhookId": "716860b6-2e2b-49cc-b10e-664dff5c7acb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter overdue invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter overdue invoices": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1b97624e-3eb2-4baf-87dc-cf8d7d45a19b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "CRrT6pL1L4YH2RxT",
+  "tags": []
+}
