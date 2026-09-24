@@ -1,0 +1,119 @@
+# AI Invoice Processing Automation
+
+An end-to-end invoice automation built with **n8n** and the **Claude API**. It pulls invoices from email, extracts the key details with AI, checks for duplicates and total mismatches, logs clean invoices to Google Sheets, and keeps you informed through **Telegram and email** alerts, payment reminders, and a monthly summary.
+
+## Features
+
+- **Email intake:** watches Gmail for messages with invoice attachments (PDF, PNG, JPG, DOCX).
+- **Multi-format handling:** PDFs and images go straight to the AI. Word, Excel, and CSV files are converted to PDF with CloudConvert first.
+- **AI extraction:** Claude reads each invoice and returns vendor, invoice number, date, line items, stated total, and a category.
+- **Duplicate detection:** every invoice number is checked against the sheet. Duplicates trigger an alert instead of being logged again.
+- **Total validation:** the total computed from the line items is compared with the total stated on the invoice. Any mismatch triggers an alert.
+- **Auto-logging and categorization:** clean invoices are added to Google Sheets with a category and a `Pending` status.
+- **New invoice alerts:** a Telegram and email message is sent whenever an invoice is logged.
+- **Payment reminders:** a daily check sends a Telegram and email reminder for any invoice still `Pending` after 7 or more days.
+- **Monthly summary:** at the start of each month, a Telegram and email summary shows last month's invoice count, total amount, and top spending category.
+- **Unsupported file alerts:** if an attachment type can't be processed, you get a Telegram message.
+
+## How it works
+
+```
+Gmail (new email with attachment)
+        |
+        v
+Split attachments --> Switch by file type
+        |                    |
+   PDF / image        Word / Excel / CSV --> CloudConvert (to PDF)
+        |                    |
+        +--------> Claude extracts invoice data <--------+
+                             |
+                             v
+                Parse JSON + validate totals (JavaScript)
+                             |
+                             v
+                 Look up invoice number in Google Sheets
+                     |                       |
+               Found (duplicate)          Not found
+                     |                       |
+             Telegram + email alert   Total mismatch?
+                                        |          |
+                                       Yes         No
+                                        |          |
+                              Telegram + email   Append row to sheet
+                                  alert          + Telegram + email notice
+```
+
+Two more workflows run on a schedule:
+
+- **Payment reminder:** every day at 9:00, reads the sheet, finds `Pending` invoices that are 7+ days old, and sends reminders.
+- **Monthly summary:** at 9:00 at the start of each month, calculates last month's totals from the sheet and sends the summary.
+
+## Tech stack
+
+| Purpose | Tool |
+| --- | --- |
+| Workflow automation | n8n |
+| Invoice data extraction | Claude API (Anthropic) |
+| File conversion | CloudConvert API |
+| Data store | Google Sheets |
+| Email | Gmail |
+| Alerts | Telegram Bot |
+| Custom logic | JavaScript (n8n Code nodes) |
+
+## Repository contents
+
+| File | Description |
+| --- | --- |
+| `invoice-automation-workflow.json` | Main workflow: intake, extraction, validation, logging, alerts |
+| `invoice-payment-reminder.json` | Daily reminder for invoices pending 7+ days |
+| `monthly-invoice-summary.json` | Monthly summary of last month's invoices |
+
+## Setup
+
+### 1. Create the Google Sheet
+
+Create a sheet with these exact column headers in the first row:
+
+`Date` | `Vendor` | `Invoice Number` | `Category` | `Total` | `Status` | `Notes`
+
+### 2. Create your credentials in n8n
+
+- **Gmail** (OAuth2)
+- **Google Sheets** (OAuth2)
+- **Anthropic** API key
+- **Telegram** bot token (create a bot with @BotFather)
+- **CloudConvert** API key, saved as a *Header Auth* credential (`Authorization: Bearer YOUR_API_KEY`)
+
+### 3. Import the workflows
+
+In n8n, choose **Import from file** and import all three JSON files.
+
+### 4. Replace the placeholders
+
+The exported files contain placeholders instead of personal values. Update them in each workflow:
+
+| Placeholder | Replace with |
+| --- | --- |
+| `YOUR_CHAT_ID` | Your Telegram chat ID |
+| `you@example.com` | The email address that should receive alerts |
+| `YOUR_SHEET_ID` | Your Google Sheet (re-select it in each Google Sheets node) |
+| `YOUR_CREDENTIAL_ID` | Re-select your own credential in every node that uses one |
+| `YOUR_INSTANCE_ID` | Nothing, n8n overwrites this on import |
+
+### 5. Activate
+
+Test the main workflow with a sample invoice, then switch on all three workflows.
+
+## Usage notes
+
+- **Stopping reminders:** when an invoice is paid, change its `Status` in the sheet from `Pending` to `Paid`. Reminders only apply to `Pending` invoices and repeat daily until the status changes.
+- **Mismatched invoices are not logged.** They trigger an alert so you can check them manually.
+- **Categories** are Utilities, Software, Supplies, Travel, Services, Rent, Equipment, or Other. Edit the prompt in the "Analyze document" node to change them.
+- **Verify AI output.** Extraction is very accurate on clear invoices but can misread poor scans, so treat the sheet as a first pass for review.
+
+<!--
+## Screenshots
+Add screenshots to a /screenshots folder, then uncomment:
+![Main workflow](screenshots/main-workflow.png)
+![Telegram alert](screenshots/telegram-alert.png)
+-->
