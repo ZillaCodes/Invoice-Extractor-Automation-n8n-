@@ -50,23 +50,23 @@ Two more workflows run on a schedule:
 
 ## Tech stack
 
-| Purpose | Tool |
-| --- | --- |
-| Workflow automation | n8n |
-| Invoice data extraction | Claude API (Anthropic) |
-| File conversion | CloudConvert API |
-| Data store | Google Sheets |
-| Email | Gmail |
-| Alerts | Telegram Bot |
-| Custom logic | JavaScript (n8n Code nodes) |
+ Purpose                 |        Tool 
+ 
+ Workflow automation     |        n8n 
+ Invoice data extraction |        Claude API (Anthropic) 
+ File conversion         |        CloudConvert API 
+ Data store              |         Google Sheets 
+ Email                   |           Gmail 
+ Alerts                  |           Telegram Bot + Email
+ Custom logic            |      JavaScript (n8n Code nodes)
 
 ## Repository contents
 
-| File | Description |
-| --- | --- |
-| `invoice-automation-workflow.json` | Main workflow: intake, extraction, validation, logging, alerts |
-| `invoice-payment-reminder.json` | Daily reminder for invoices pending 7+ days |
-| `monthly-invoice-summary.json` | Monthly summary of last month's invoices |
+ File                                |      Description 
+
+ `invoice-automation-workflow.json`  |   Main workflow: intake, extraction, validation, logging, alerts 
+ `invoice-payment-reminder.json`     |    Daily reminder for invoices pending 7+ days 
+ `monthly-invoice-summary.json`      |    Monthly summary of last month's invoices 
 
 ## Setup
 
@@ -92,13 +92,13 @@ In n8n, choose **Import from file** and import all three JSON files.
 
 The exported files contain placeholders instead of personal values. Update them in each workflow:
 
-| Placeholder | Replace with |
-| --- | --- |
-| `YOUR_CHAT_ID` | Your Telegram chat ID |
-| `you@example.com` | The email address that should receive alerts |
-| `YOUR_SHEET_ID` | Your Google Sheet (re-select it in each Google Sheets node) |
-| `YOUR_CREDENTIAL_ID` | Re-select your own credential in every node that uses one |
-| `YOUR_INSTANCE_ID` | Nothing, n8n overwrites this on import |
+ Placeholder          |          Replace with 
+
+ `YOUR_CHAT_ID`       |        Your Telegram chat ID 
+ `you@example.com`    |       The email address that should receive alerts 
+ `YOUR_SHEET_ID`      |        Your Google Sheet (re-select it in each Google Sheets node) 
+ `YOUR_CREDENTIAL_ID  |      Re-select your own credential in every node that uses one 
+ `YOUR_INSTANCE_ID    |     Nothing, n8n overwrites this on import 
 
 ### 5. Activate
 
